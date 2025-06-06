@@ -4,11 +4,11 @@ import { lookbookAPI, productAPI } from '../services/api';
 
 const Lookbook = () => {
   const [looks, setLooks] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Store all unique products
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(true);
   const [videoProgress, setVideoProgress] = useState({});
-  const [currentLookIndex, setCurrentLookIndex] = useState(0);
   const [videoPaused, setVideoPaused] = useState({});
   const [videoStates, setVideoStates] = useState({}); // Track video ready states
   
@@ -71,7 +71,6 @@ const Lookbook = () => {
           // Debounce the intersection changes
           observerTimeouts.current[lookIndex] = setTimeout(() => {
             if (entry.isIntersecting) {
-              setCurrentLookIndex(lookIndex);
               // Only play if it's a video
               if (look?.contentType === 'video') {
                 playVideo(lookIndex);
@@ -98,8 +97,9 @@ const Lookbook = () => {
 
     return () => {
       observer.disconnect();
-      // Clear all timeouts
-      Object.values(observerTimeouts.current).forEach(timeout => {
+      // Clear all timeouts - fix for ref dependency warning
+      const currentTimeouts = observerTimeouts.current;
+      Object.values(currentTimeouts).forEach(timeout => {
         if (timeout) clearTimeout(timeout);
       });
     };
@@ -111,6 +111,43 @@ const Lookbook = () => {
       const fetchedLooks = await lookbookAPI.getAllLooks();
       console.log('Fetched looks:', fetchedLooks);
       setLooks(fetchedLooks || []);
+      
+      // Extract all unique product IDs from all looks
+      const allProductIds = [];
+      fetchedLooks?.forEach(look => {
+        if (look.productIds) {
+          look.productIds.forEach(productId => {
+            // Convert ObjectId to string if necessary
+            const idString = typeof productId === 'object' && productId._id ? productId._id : 
+                           typeof productId === 'object' && productId.toString ? productId.toString() : 
+                           productId;
+            
+            if (!allProductIds.includes(idString)) {
+              allProductIds.push(idString);
+            }
+          });
+        }
+      });
+      
+      console.log('Found product IDs:', allProductIds);
+      
+      // Fetch all products
+      const products = [];
+      for (const productId of allProductIds) {
+        try {
+          // Ensure productId is a string
+          const idString = typeof productId === 'object' ? productId.toString() : productId;
+          const product = await productAPI.getProduct(idString);
+          if (product) {
+            products.push(product);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch product:', productId, err);
+        }
+      }
+      
+      console.log('Fetched products:', products);
+      setAllProducts(products);
       setError(null);
     } catch (err) {
       setError('Failed to load looks. Please try again.');
@@ -124,55 +161,12 @@ const Lookbook = () => {
     navigate(`/product/${productId}`);
   };
 
-  // Fast navigation for media clicks - navigate to first product or show quick selection
-  const handleMediaClick = (look, lookIndex, event) => {
-    // Prevent default and stop propagation for faster response
-    event.preventDefault();
-    event.stopPropagation();
-
-    // For videos, check if click is on control areas
-    if (look.contentType === 'video') {
-      const rect = event.target.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const clickY = event.clientY - rect.top;
-      
-      // Check if click is on control areas (bottom 15% for controls, right 15% for mute)
-      const isBottomControl = clickY > rect.height * 0.85;
-      const isRightControl = clickX > rect.width * 0.85;
-      const isTopLeftControl = clickY < rect.height * 0.15 && clickX < rect.width * 0.3; // Product count area
-      
-      if (isBottomControl || isRightControl || isTopLeftControl) {
-        // Don't navigate, let video controls handle it
-        if (!isTopLeftControl) {
-          toggleVideoPause(lookIndex);
-        }
-        return;
-      }
-    }
-
-    // Immediate navigation for faster response
-    if (look.productIds && look.productIds.length > 0) {
-      const productId = look.productIds[0]; // Always use first product for speed
-      console.log('Fast navigation to product:', productId);
-      
-      // Navigate immediately without waiting
-      navigate(`/product/${productId}`);
-    }
-  };
-
-  // Fast mute toggle with visual feedback
-  const toggleMute = (event) => {
-    if (event) {
-      event.stopPropagation(); // Prevent media click
-    }
-    
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
-    
-    // Update all videos immediately
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    // Update all videos
     Object.values(videoRefs.current).forEach(video => {
       if (video) {
-        video.muted = newMutedState;
+        video.muted = !isMuted;
       }
     });
   };
@@ -234,195 +228,148 @@ const Lookbook = () => {
   }
 
   return (
-    <div className="video-feed">
-      {looks.map((look, lookIndex) => (
-        <div 
-          key={look._id} 
-          className="look-container"
-          ref={el => lookRefs.current[lookIndex] = el}
-          data-look-index={lookIndex}
-        >
-          {/* Look Header */}
-          <div className="look-header">
-            <h3 className="look-title">{look.title}</h3>
-            {look.productIds && look.productIds.length > 0 && (
-              <div className="text-xs text-white opacity-75 flex items-center">
-                {look.productIds.length === 1 ? (
-                  <span>👆 Tap to shop</span>
-                ) : (
-                  <span>👆 Tap to shop ({look.productIds.length} items)</span>
-                )}
-              </div>
-            )}
-          </div>
+    <>
+      <div className="video-feed">
+        {looks.map((look, lookIndex) => (
+          <div 
+            key={look._id} 
+            className="look-container"
+            ref={el => lookRefs.current[lookIndex] = el}
+            data-look-index={lookIndex}
+          >
+            {/* Look Header */}
+            <div className="look-header">
+              <h3 className="look-title">{look.title}</h3>
+            </div>
 
-          {/* Media Container */}
-          <div className="media-container">
-            {look.contentType === 'video' ? (
-              <video 
-                ref={el => videoRefs.current[lookIndex] = el}
-                src={look.mediaUrl} 
-                className="media-element"
-                loop
-                muted={isMuted}
-                playsInline
-                preload="metadata"
-                onClick={(e) => handleMediaClick(look, lookIndex, e)}
-                onLoadedData={() => handleVideoLoaded(lookIndex)}
-                onTimeUpdate={(e) => {
-                  handleVideoProgress(lookIndex, e.target.currentTime, e.target.duration);
-                }}
-                onError={(e) => {
-                  console.error('Video error:', e);
-                  setVideoStates(prev => ({ ...prev, [lookIndex]: 'error' }));
-                }}
-                onWaiting={() => setVideoStates(prev => ({ ...prev, [lookIndex]: 'loading' }))}
-                onCanPlay={() => setVideoStates(prev => ({ ...prev, [lookIndex]: 'ready' }))}
-              />
-            ) : (
-              <img 
-                src={look.mediaUrl} 
-                alt={look.title}
-                className="media-element"
-                onClick={(e) => handleMediaClick(look, lookIndex, e)}
-                onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/400x600?text=Image+Not+Found';
-                }}
-              />
-            )}
-
-            {/* Video Controls (only for videos) */}
-            {look.contentType === 'video' && (
-              <>
-                {/* Video progress bar */}
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill"
-                    style={{ width: `${videoProgress[lookIndex] || 0}%` }}
-                  />
-                </div>
-
-                {/* Play/Pause indicator */}
-                {(videoPaused[lookIndex] || videoStates[lookIndex] === 'paused') && (
-                  <div className="play-pause-indicator">
-                    <div className="text-white text-4xl">▶️</div>
-                  </div>
-                )}
-
-                {/* Loading indicator */}
-                {videoStates[lookIndex] === 'loading' && (
-                  <div className="play-pause-indicator">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Global Mute button - appears on ALL content (videos and images) */}
-            <button 
-              onClick={(e) => toggleMute(e)} 
-              className="mute-btn"
-              style={{ zIndex: 50 }}
-            >
-              {isMuted ? '🔇' : '🔊'}
-            </button>
-
-            {/* Product count indicator for multiple products */}
-            {look.productIds && look.productIds.length > 1 && (
-              <div className="absolute top-4 left-4 z-40 bg-black bg-opacity-60 backdrop-blur-lg text-white px-3 py-1 rounded-full text-sm">
-                {look.productIds.length} items
-              </div>
-            )}
-
-            {/* Scroll indicator */}
-            {lookIndex < looks.length - 1 && (
-              <div className="scroll-indicator">
-                <div className="scroll-arrow">↑</div>
-                <div>Swipe up</div>
-              </div>
-            )}
-          </div>
-
-          {/* Product Scroll Bar - SMALLER */}
-          <div className="product-scroll-container">
-            <div className="product-scroll">
-              {look.productIds?.map((productId, index) => (
-                <ProductCard
-                  key={`${lookIndex}-${index}`}
-                  productId={productId}
-                  onShopNow={handleShopNow}
+            {/* Media Container */}
+            <div className="media-container">
+              {look.contentType === 'video' ? (
+                <video 
+                  ref={el => videoRefs.current[lookIndex] = el}
+                  src={look.mediaUrl} 
+                  className="media-element"
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  preload="metadata"
+                  onClick={() => toggleVideoPause(lookIndex)}
+                  onLoadedData={() => handleVideoLoaded(lookIndex)}
+                  onTimeUpdate={(e) => {
+                    handleVideoProgress(lookIndex, e.target.currentTime, e.target.duration);
+                  }}
+                  onError={(e) => {
+                    console.error('Video error:', e);
+                    setVideoStates(prev => ({ ...prev, [lookIndex]: 'error' }));
+                  }}
+                  onWaiting={() => setVideoStates(prev => ({ ...prev, [lookIndex]: 'loading' }))}
+                  onCanPlay={() => setVideoStates(prev => ({ ...prev, [lookIndex]: 'ready' }))}
                 />
-              ))}
+              ) : (
+                <img 
+                  src={look.mediaUrl} 
+                  alt={look.title}
+                  className="media-element"
+                  onError={(e) => {
+                    e.target.src = 'https://via.placeholder.com/400x600?text=Image+Not+Found';
+                  }}
+                />
+              )}
+
+              {/* Annotation Dots - Instagram style product tags */}
+              {look.productIds && look.productIds.map((productId, idx) => {
+                // Sample positions - in real app, these would come from database
+                const samplePositions = [
+                  { top: '25%', left: '30%' },
+                  { top: '45%', left: '70%' },
+                  { top: '65%', left: '25%' },
+                  { top: '80%', left: '60%' }
+                ];
+                const position = samplePositions[idx % samplePositions.length];
+                
+                return (
+                  <div
+                    key={`annotation-${lookIndex}-${productId}-${idx}`}
+                    className="absolute w-6 h-6 bg-white bg-opacity-90 rounded-full border-2 border-teal-400 flex items-center justify-center cursor-pointer z-30 animate-pulse hover:scale-110 transition-transform"
+                    style={{ top: position.top, left: position.left }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShopNow(productId);
+                    }}
+                  >
+                    <div className="w-2 h-2 bg-teal-400 rounded-full"></div>
+                  </div>
+                );
+              })}
+
+              {/* Video Controls (only for videos) */}
+              {look.contentType === 'video' && (
+                <>
+                  {/* Mute button */}
+                  <button onClick={toggleMute} className="mute-btn">
+                    {isMuted ? '🔇' : '🔊'}
+                  </button>
+
+                  {/* Video progress bar */}
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill"
+                      style={{ width: `${videoProgress[lookIndex] || 0}%` }}
+                    />
+                  </div>
+
+                  {/* Play/Pause indicator */}
+                  {(videoPaused[lookIndex] || videoStates[lookIndex] === 'paused') && (
+                    <div className="play-pause-indicator">
+                      <div className="text-white text-4xl">▶️</div>
+                    </div>
+                  )}
+
+                  {/* Loading indicator */}
+                  {videoStates[lookIndex] === 'loading' && (
+                    <div className="play-pause-indicator">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Scroll indicator */}
+              {lookIndex < looks.length - 1 && (
+                <div className="scroll-indicator">
+                  <div className="scroll-arrow">↑</div>
+                  <div>Swipe up</div>
+                </div>
+              )}
+            </div>
+
+            {/* Products for THIS specific look - positioned absolutely within this look container */}
+            <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-4 pb-2">
+              <div className="flex overflow-x-auto space-x-2 px-3">
+                {allProducts.length > 0 ? (
+                  allProducts.map((product, index) => (
+                    <ProductCard
+                      key={`look-${lookIndex}-product-${product._id}-${index}`}
+                      product={product}
+                      onShopNow={handleShopNow}
+                    />
+                  ))
+                ) : (
+                  <div className="text-white text-xs p-2">
+                    Loading products...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 };
 
-// Product Card Component - Horizontal Layout like Screenshot
-const ProductCard = ({ productId, onShopNow }) => {
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchProduct();
-  }, [productId]);
-
-  const fetchProduct = async () => {
-    try {
-      console.log('ProductCard raw productId:', productId, 'Type:', typeof productId);
-      
-      if (!productId) {
-        console.error('ProductCard: Product ID is null or undefined');
-        return;
-      }
-
-      // Ensure productId is a string - handle ObjectId conversion
-      let cleanProductId;
-      if (typeof productId === 'object' && productId !== null) {
-        if (productId.$oid) {
-          cleanProductId = productId.$oid;
-        } else if (productId.toString) {
-          cleanProductId = productId.toString();
-        } else {
-          cleanProductId = String(productId);
-        }
-      } else {
-        cleanProductId = String(productId);
-      }
-      
-      console.log('ProductCard clean productId:', cleanProductId);
-      
-      // Validate MongoDB ObjectId format
-      if (!/^[0-9a-fA-F]{24}$/.test(cleanProductId)) {
-        console.error('ProductCard: Invalid MongoDB ObjectId format:', cleanProductId);
-        return;
-      }
-      
-      const fetchedProduct = await productAPI.getProduct(cleanProductId);
-      setProduct(fetchedProduct);
-    } catch (err) {
-      console.error('ProductCard: Error fetching product:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="product-card loading">
-        <div className="animate-pulse bg-gray-300 product-image"></div>
-        <div className="product-info">
-          <div className="animate-pulse bg-gray-300 h-3 w-3/4 mb-1 rounded"></div>
-          <div className="animate-pulse bg-gray-300 h-4 w-1/2 mb-2 rounded"></div>
-          <div className="animate-pulse bg-gray-300 h-6 w-full rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
+// Product Card Component - SMALLER - Now receives product directly
+const ProductCard = ({ product, onShopNow }) => {
   if (!product) return null;
 
   return (
@@ -432,14 +379,12 @@ const ProductCard = ({ productId, onShopNow }) => {
         alt={product.name}
         className="product-image"
         onError={(e) => {
-          e.target.src = 'https://via.placeholder.com/90x90?text=Product';
+          e.target.src = 'https://via.placeholder.com/80x48?text=Product';
         }}
       />
       <div className="product-info">
-        <div>
-          <h4 className="product-name">{product.name}</h4>
-          <p className="product-price">€{product.price}</p>
-        </div>
+        <h4 className="product-name">{product.name}</h4>
+        <p className="product-price">€{product.price}</p>
         <button 
           onClick={() => onShopNow(product._id)}
           className="shop-btn"
