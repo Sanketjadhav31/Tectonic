@@ -14,6 +14,7 @@ const AnnotationDot = ({ x, y, onClick, index }) => {
     onClick();
   };
 
+
   const handleClick = (e) => {
     e.stopPropagation();
     onClick();

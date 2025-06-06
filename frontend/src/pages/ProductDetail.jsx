@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { productAPI } from '../services/api';
+import { lookbookAPI } from '../services/api';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -14,8 +14,7 @@ const ProductDetail = () => {
   const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Fetching product with ID:', id);
-      const fetchedProduct = await productAPI.getProduct(id);
+      const fetchedProduct = await lookbookAPI.getProductById(id);
       setProduct(fetchedProduct);
       setError(null);
     } catch (err) {

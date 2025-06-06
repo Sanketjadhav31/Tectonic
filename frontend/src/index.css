@@ -25,7 +25,7 @@
 }
 
 @layer components {
-  /* Main Feed Container - TikTok/Instagram Reels Style */
+  /* Main Feed Container - TikTok/Instagram Reels Style with Scroll Snap */
   .video-feed {
     @apply h-screen overflow-y-auto;
     scroll-snap-type: y mandatory;
@@ -61,28 +61,23 @@
     @apply text-lg font-semibold text-white;
   }
 
-  /* Media Container - 80vh Centered */
+  /* Media Container - Full Height Centered */
   .media-container {
     @apply relative w-full flex items-center justify-center;
-    height: 80vh;
+    height: 100vh;
     max-width: 600px;
   }
 
-  /* Media Element - 80vh with Rounded Corners */
+  /* Media Element - Full Height with Rounded Corners */
   .media-element {
     @apply w-full rounded-2xl object-cover;
-    height: 80vh;
+    height: 85vh;
     cursor: pointer;
-    transition: transform 0.1s ease-out;
-  }
-
-  .media-element:active {
-    transform: scale(0.98);
   }
 
   /* Mute Button - Bottom Right of Video */
   .mute-btn {
-    @apply absolute bottom-4 right-4 w-12 h-12 rounded-full;
+    @apply absolute bottom-20 right-4 w-12 h-12 rounded-full;
     @apply bg-black bg-opacity-60 backdrop-blur-lg text-white;
     @apply flex items-center justify-center text-xl z-30;
     @apply border border-white border-opacity-20;
@@ -91,7 +86,7 @@
 
   /* Video Progress Bar */
   .progress-bar {
-    @apply absolute bottom-4 left-4 right-16 h-1 bg-white bg-opacity-30 rounded-full z-30;
+    @apply absolute bottom-20 left-4 right-16 h-1 bg-white bg-opacity-30 rounded-full z-30;
   }
 
   .progress-fill {
@@ -106,16 +101,16 @@
     @apply transition-opacity duration-300;
   }
 
-  /* Product Scroll Container - Bottom */
+  /* Product Scroll Container - Bottom - VISIBLE COMPACT */
   .product-scroll-container {
     @apply absolute bottom-0 left-0 right-0 z-40;
-    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 10%, rgba(0,0,0,0.95) 100%);
-    padding-top: 20px;
-    padding-bottom: env(safe-area-inset-bottom, 16px);
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 10%, rgba(0,0,0,0.9) 100%);
+    padding-top: 12px;
+    padding-bottom: env(safe-area-inset-bottom, 8px);
   }
 
   .product-scroll {
-    @apply flex overflow-x-auto space-x-3 px-4 pb-3;
+    @apply flex overflow-x-auto space-x-2 px-3 pb-2;
     scrollbar-width: none;
     -ms-overflow-style: none;
     scroll-snap-type: x mandatory;
@@ -125,20 +120,18 @@
     display: none;
   }
 
-  /* Product Cards - Horizontal Layout like Screenshot */
+  /* Product Cards - SMALL BUT VISIBLE */
   .product-card {
-    @apply flex-shrink-0 bg-white rounded-xl overflow-hidden shadow-lg;
-    @apply border-2 border-transparent transition-all duration-300;
+    @apply flex-shrink-0 w-20 bg-white rounded-lg overflow-hidden shadow-md;
+    @apply border border-transparent transition-all duration-300;
     scroll-snap-align: start;
-    width: 160px;
-    height: 80px;
-    display: flex;
-    flex-direction: row;
+    min-width: 80px;
+    height: auto;
   }
 
   .product-card.selected {
     @apply border-orange-400 shadow-orange-400/50;
-    transform: scale(1.02);
+    transform: scale(1.05);
   }
 
   .product-card.loading {
@@ -146,48 +139,36 @@
   }
 
   .product-image {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    flex-shrink: 0;
+    @apply w-full h-12 object-cover;
   }
 
   .product-info {
-    @apply p-2 text-black flex-1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    @apply p-1 text-black;
   }
 
   .product-name {
-    @apply font-medium text-gray-900 mb-1 line-clamp-2;
-    font-size: 11px;
-    line-height: 13px;
-    height: 26px;
+    @apply font-medium text-gray-900 mb-0.5 line-clamp-1;
+    font-size: 8px;
+    line-height: 10px;
+    height: 10px;
   }
 
   .product-price {
-    @apply font-bold text-red-500 mb-2;
-    font-size: 13px;
-    line-height: 15px;
+    @apply font-bold text-orange-500 mb-1;
+    font-size: 9px;
+    line-height: 11px;
   }
 
   .shop-btn {
-    @apply w-full text-white py-1.5 px-2 rounded font-bold;
-    @apply transition-colors duration-200;
-    background: #8b5cf6; /* Purple like in screenshot */
-    font-size: 11px;
-    line-height: 13px;
-    text-transform: uppercase;
-  }
-
-  .shop-btn:hover {
-    background: #7c3aed;
+    @apply w-full bg-purple-600 text-white py-1 px-1 rounded font-bold;
+    @apply hover:bg-purple-700 transition-colors duration-200;
+    font-size: 7px;
+    line-height: 8px;
   }
 
   /* Scroll Indicator - Swipe Up */
   .scroll-indicator {
-    @apply absolute bottom-28 right-4 z-20;
+    @apply absolute bottom-24 right-4 z-20;
     @apply text-white text-xs opacity-60;
     @apply flex flex-col items-center space-y-1;
   }
@@ -227,50 +208,45 @@
 /* Mobile-specific styles */
 @media (max-width: 768px) {
   .media-container {
-    height: 80vh;
+    height: 100vh;
   }
 
   .media-element {
-    height: 80vh;
+    height: 85vh;
   }
 
   .product-card {
-    width: 140px;
-    height: 70px;
+    @apply w-16;
+    min-width: 64px;
   }
 
   .product-image {
-    width: 70px;
-    height: 70px;
-  }
-
-  .product-info {
-    @apply p-1.5;
+    @apply h-10;
   }
 
   .product-name {
-    font-size: 10px;
-    line-height: 12px;
-    height: 24px;
+    font-size: 7px;
+    line-height: 9px;
+    height: 9px;
   }
 
   .product-price {
-    font-size: 12px;
-    line-height: 14px;
+    font-size: 8px;
+    line-height: 10px;
   }
 
   .shop-btn {
-    font-size: 10px;
-    line-height: 12px;
+    font-size: 6px;
+    line-height: 7px;
     @apply py-1;
   }
 
   .mute-btn {
-    @apply w-10 h-10 text-lg;
+    @apply w-10 h-10 text-lg bottom-20;
   }
 
   .scroll-indicator {
-    @apply bottom-32;
+    @apply bottom-24;
   }
 }
 
@@ -281,38 +257,20 @@
   }
 
   .media-container {
-    height: 80vh;
+    height: 100vh;
     max-width: 500px;
   }
 
   .media-element {
-    height: 80vh;
+    height: 85vh;
   }
 
   .product-card {
-    width: 180px;
-    height: 90px;
+    @apply w-28;
   }
 
   .product-image {
-    width: 90px;
-    height: 90px;
-  }
-
-  .product-name {
-    font-size: 12px;
-    line-height: 14px;
-    height: 28px;
-  }
-
-  .product-price {
-    font-size: 14px;
-    line-height: 16px;
-  }
-
-  .shop-btn {
-    font-size: 12px;
-    line-height: 14px;
+    @apply h-20;
   }
 
   .mute-btn {

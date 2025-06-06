@@ -117,45 +117,41 @@ async function seedDatabase() {
       console.log(`${index + 1}. ${product.name} - ID: ${product._id}`);
     });
 
-    // Assign products to looks - BETTER MIX for horizontal scrolling showcase
-    // Look 1: Casual Streetwear - Multiple (4 products) - Good horizontal scroll
+    // Assign products to looks for the bottom scroll (only 2-3 products per look)
+    // Look 1: Casual Streetwear - Sneakers, Denim Jacket
     sampleLooks[0].productIds = [
       insertedProducts[0]._id.toString(), // Sneakers
-      insertedProducts[1]._id.toString(), // Denim jacket
-      insertedProducts[7]._id.toString(), // Cap
+      insertedProducts[1]._id.toString()  // Denim jacket
+    ];
+
+    // Look 2: Urban Chic - Sunglasses, Jeans
+    sampleLooks[1].productIds = [
+      insertedProducts[3]._id.toString(), // Sunglasses
+      insertedProducts[4]._id.toString()  // Jeans
+    ];
+
+    // Look 3: Minimalist Style - Watch, Bag
+    sampleLooks[2].productIds = [
+      insertedProducts[5]._id.toString(), // Watch
       insertedProducts[2]._id.toString()  // Bag
     ];
 
-    // Look 2: Urban Chic - Multiple (3 products)
-    sampleLooks[1].productIds = [
-      insertedProducts[3]._id.toString(), // Sunglasses
-      insertedProducts[4]._id.toString(), // Jeans
-      insertedProducts[5]._id.toString()  // Watch
-    ];
-
-    // Look 3: Minimalist Style - Single product
-    sampleLooks[2].productIds = [
-      insertedProducts[5]._id.toString()  // Watch only
-    ];
-
-    // Look 4: Cozy Winter - Multiple (2 products)
+    // Look 4: Cozy Winter - Sweater, Cap
     sampleLooks[3].productIds = [
       insertedProducts[6]._id.toString(), // Knit sweater
       insertedProducts[7]._id.toString()  // Cap
     ];
 
-    // Look 5: Summer Vibes - Multiple (5 products) - Maximum horizontal scroll
+    // Look 5: Summer Vibes - Sunglasses, Sneakers
     sampleLooks[4].productIds = [
       insertedProducts[3]._id.toString(), // Sunglasses
-      insertedProducts[0]._id.toString(), // Sneakers
-      insertedProducts[2]._id.toString(), // Bag
-      insertedProducts[4]._id.toString(), // Jeans
-      insertedProducts[6]._id.toString()  // Sweater
+      insertedProducts[0]._id.toString()  // Sneakers
     ];
 
-    // Look 6: Evening Elegance - Single product
+    // Look 6: Evening Elegance - Watch, Bag
     sampleLooks[5].productIds = [
-      insertedProducts[1]._id.toString()  // Denim jacket only
+      insertedProducts[5]._id.toString(), // Watch
+      insertedProducts[2]._id.toString()  // Bag
     ];
 
     // Insert looks
